@@ -1,0 +1,149 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: default-deny all writes & reads
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidMediaItem() {
+      return incoming().keys().hasAll([
+        'id', 'ownerId', 'fileName', 'storagePath', 'downloadUrl',
+        'fileSize', 'contentType', 'mediaType', 'checksum', 'verified',
+        'uploadedAt', 'isFavorite', 'isTrash'
+      ]) &&
+      incoming().keys().hasOnly([
+        'id', 'ownerId', 'fileName', 'storagePath', 'downloadUrl',
+        'fileSize', 'contentType', 'mediaType', 'checksum', 'verified',
+        'verifiedAt', 'takenAt', 'uploadedAt', 'isFavorite', 'isTrash',
+        'trashedAt', 'caption', 'width', 'height', 'duration'
+      ]) &&
+      incoming().id is string && incoming().id.size() <= 128 &&
+      incoming().ownerId is string && incoming().ownerId == request.auth.uid &&
+      incoming().fileName is string && incoming().fileName.size() > 0 && incoming().fileName.size() <= 256 &&
+      incoming().storagePath is string && incoming().storagePath.size() <= 512 &&
+      incoming().downloadUrl is string && incoming().downloadUrl.size() <= 2048 &&
+      incoming().fileSize is number && incoming().fileSize > 0 && incoming().fileSize <= 5368709120 &&
+      incoming().contentType is string && incoming().contentType.size() <= 128 &&
+      incoming().mediaType in ['photo', 'video'] &&
+      incoming().checksum is string && incoming().checksum.size() <= 128 &&
+      incoming().verified is bool &&
+      incoming().isFavorite is bool &&
+      incoming().isTrash is bool &&
+      incoming().uploadedAt is string && incoming().uploadedAt.size() <= 64 &&
+      (!('caption' in incoming()) || (incoming().caption is string && incoming().caption.size() <= 500)) &&
+      (!('verifiedAt' in incoming()) || (incoming().verifiedAt is string && incoming().verifiedAt.size() <= 64)) &&
+      (!('takenAt' in incoming()) || (incoming().takenAt is string && incoming().takenAt.size() <= 64)) &&
+      (!('trashedAt' in incoming()) || (incoming().trashedAt is string && incoming().trashedAt.size() <= 64)) &&
+      (!('width' in incoming()) || (incoming().width is number)) &&
+      (!('height' in incoming()) || (incoming().height is number)) &&
+      (!('duration' in incoming()) || (incoming().duration is number));
+    }
+
+    function isValidAlbum() {
+      return incoming().keys().hasAll(['id', 'ownerId', 'title', 'createdAt']) &&
+      incoming().keys().hasOnly(['id', 'ownerId', 'title', 'description', 'coverPhotoUrl', 'mediaCount', 'createdAt', 'updatedAt']) &&
+      incoming().id is string && incoming().id.size() <= 128 &&
+      incoming().ownerId is string && incoming().ownerId == request.auth.uid &&
+      incoming().title is string && incoming().title.size() > 0 && incoming().title.size() <= 128 &&
+      incoming().createdAt is string && incoming().createdAt.size() <= 64 &&
+      (!('description' in incoming()) || (incoming().description is string && incoming().description.size() <= 500)) &&
+      (!('coverPhotoUrl' in incoming()) || (incoming().coverPhotoUrl is string && incoming().coverPhotoUrl.size() <= 2048)) &&
+      (!('mediaCount' in incoming()) || (incoming().mediaCount is number)) &&
+      (!('updatedAt' in incoming()) || (incoming().updatedAt is string && incoming().updatedAt.size() <= 64));
+    }
+
+    function isValidAlbumItem() {
+      return incoming().keys().hasAll(['id', 'albumId', 'mediaId', 'ownerId', 'addedAt']) &&
+      incoming().keys().hasOnly(['id', 'albumId', 'mediaId', 'ownerId', 'addedAt']) &&
+      incoming().id is string && incoming().id.size() <= 128 &&
+      incoming().albumId is string && incoming().albumId.size() <= 128 &&
+      incoming().mediaId is string && incoming().mediaId.size() <= 128 &&
+      incoming().ownerId is string && incoming().ownerId == request.auth.uid &&
+      incoming().addedAt is string && incoming().addedAt.size() <= 64;
+    }
+
+    function isValidUserSettings() {
+      return incoming().keys().hasAll(['userId']) &&
+      incoming().keys().hasOnly(['userId', 'safetyWarningSeen', 'secondaryBackupAcknowledged', 'updatedAt']) &&
+      incoming().userId is string && incoming().userId == request.auth.uid &&
+      (!('safetyWarningSeen' in incoming()) || incoming().safetyWarningSeen is bool) &&
+      (!('secondaryBackupAcknowledged' in incoming()) || incoming().secondaryBackupAcknowledged is bool) &&
+      (!('updatedAt' in incoming()) || (incoming().updatedAt is string && incoming().updatedAt.size() <= 64));
+    }
+
+    // Tenant-isolated collections under /users/{userId}/...
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+
+      // Media items (photos & videos)
+      match /media/{mediaId} {
+        allow get: if isOwner(userId) && isValidId(mediaId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(mediaId) && isValidMediaItem();
+        allow update: if isOwner(userId) && isValidId(mediaId) && isValidMediaItem() &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().id == existing().id &&
+          incoming().storagePath == existing().storagePath &&
+          incoming().fileSize == existing().fileSize &&
+          incoming().checksum == existing().checksum &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['isFavorite', 'isTrash', 'trashedAt', 'caption', 'verified', 'verifiedAt', 'downloadUrl']);
+        allow delete: if isOwner(userId) && isValidId(mediaId);
+      }
+
+      // Albums
+      match /albums/{albumId} {
+        allow get: if isOwner(userId) && isValidId(albumId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(albumId) && isValidAlbum();
+        allow update: if isOwner(userId) && isValidId(albumId) && isValidAlbum() &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().id == existing().id &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'coverPhotoUrl', 'mediaCount', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(albumId);
+      }
+
+      // Album mappings
+      match /album_items/{itemId} {
+        allow get: if isOwner(userId) && isValidId(itemId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(itemId) && isValidAlbumItem();
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(itemId);
+      }
+
+      // Settings
+      match /settings/{settingId} {
+        allow get: if isOwner(userId) && isValidId(settingId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(settingId) && isValidUserSettings();
+        allow update: if isOwner(userId) && isValidId(settingId) && isValidUserSettings() &&
+          incoming().userId == existing().userId &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['safetyWarningSeen', 'secondaryBackupAcknowledged', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(settingId);
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "TITTU — Personal Family Photo Vault",
+  "description": "Every memory, safely kept. Private, secure cloud photo and video vault for family memories with upload verification before freeing phone storage.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

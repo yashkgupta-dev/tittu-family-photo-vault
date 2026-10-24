@@ -1,0 +1,256 @@
+{
+  "entities": {
+    "MediaItem": {
+      "title": "MediaItem",
+      "description": "Represents an uploaded photo or video with verification data and cloud storage reference.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Unique identifier for the media item."
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Firebase Auth UID of the owner."
+        },
+        "fileName": {
+          "type": "string",
+          "maxLength": 256,
+          "description": "Original file name on the device."
+        },
+        "storagePath": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "Full path of the file in Firebase Cloud Storage."
+        },
+        "downloadUrl": {
+          "type": "string",
+          "maxLength": 2048,
+          "description": "Secure download URL for the cloud object."
+        },
+        "fileSize": {
+          "type": "number",
+          "description": "Exact file size in bytes."
+        },
+        "contentType": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "MIME content type (image/jpeg, video/mp4, etc.)."
+        },
+        "mediaType": {
+          "type": "string",
+          "enum": ["photo", "video"],
+          "description": "Category of media: photo or video."
+        },
+        "checksum": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "SHA-256 hex checksum computed from original file for safety verification."
+        },
+        "verified": {
+          "type": "boolean",
+          "description": "Whether cloud object existence, size and integrity have been confirmed."
+        },
+        "verifiedAt": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "ISO timestamp when cloud verification succeeded."
+        },
+        "takenAt": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "ISO timestamp when the photo/video was captured or created."
+        },
+        "uploadedAt": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "ISO timestamp when upload occurred."
+        },
+        "isFavorite": {
+          "type": "boolean",
+          "description": "True if user marked as favorite memory."
+        },
+        "isTrash": {
+          "type": "boolean",
+          "description": "True if user moved item to trash (soft deletion)."
+        },
+        "trashedAt": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "ISO timestamp when moved to trash, or empty."
+        },
+        "caption": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Optional family caption or note."
+        },
+        "width": {
+          "type": "number",
+          "description": "Media width in pixels."
+        },
+        "height": {
+          "type": "number",
+          "description": "Media height in pixels."
+        },
+        "duration": {
+          "type": "number",
+          "description": "Duration in seconds for video files."
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "fileName",
+        "storagePath",
+        "downloadUrl",
+        "fileSize",
+        "contentType",
+        "mediaType",
+        "checksum",
+        "verified",
+        "uploadedAt",
+        "isFavorite",
+        "isTrash"
+      ]
+    },
+    "Album": {
+      "title": "Album",
+      "description": "User-curated family photo album or memory folder.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Unique identifier for the album."
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Firebase Auth UID of the owner."
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Album title name."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Album description."
+        },
+        "coverPhotoUrl": {
+          "type": "string",
+          "maxLength": 2048,
+          "description": "URL for album cover image."
+        },
+        "mediaCount": {
+          "type": "number",
+          "description": "Number of media items in this album."
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "ISO timestamp of creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "ISO timestamp of latest update."
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "title",
+        "createdAt"
+      ]
+    },
+    "AlbumItem": {
+      "title": "AlbumItem",
+      "description": "Mapping document linking an album to a media item.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Document ID, usually albumId_mediaId."
+        },
+        "albumId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "ID of the album."
+        },
+        "mediaId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "ID of the media item."
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "UID of owner."
+        },
+        "addedAt": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "ISO timestamp when added to album."
+        }
+      },
+      "required": [
+        "id",
+        "albumId",
+        "mediaId",
+        "ownerId",
+        "addedAt"
+      ]
+    },
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "Preferences, safety reminders, and cloud storage usage stats for the user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Firebase Auth UID."
+        },
+        "safetyWarningSeen": {
+          "type": "boolean",
+          "description": "Whether user read the local phone deletion safety checklist."
+        },
+        "secondaryBackupAcknowledged": {
+          "type": "boolean",
+          "description": "Whether user acknowledged the 3-2-1 second backup recommendation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "ISO timestamp of last update."
+        }
+      },
+      "required": [
+        "userId"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/media/{mediaId}": {
+      "schema": "MediaItem",
+      "description": "Private media items belonging strictly to userId."
+    },
+    "/users/{userId}/albums/{albumId}": {
+      "schema": "Album",
+      "description": "Private photo albums belonging strictly to userId."
+    },
+    "/users/{userId}/album_items/{itemId}": {
+      "schema": "AlbumItem",
+      "description": "Mapping connecting media items to albums for userId."
+    },
+    "/users/{userId}/settings/{settingId}": {
+      "schema": "UserSettings",
+      "description": "User preferences and safety checklist state."
+    }
+  }
+}

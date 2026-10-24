@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+bun.lockb
+.pnp
+
+# Build output and local caches
+dist/
+build/
+coverage/
+.vite/
+.DS_Store
+Thumbs.db
+*.log
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+service-account*.json
+*-firebase-adminsdk-*.json
+firebase-debug.log
+
+# Local editor and deployment state
+.vscode/
+.idea/
+.firebase/
+.vercel/
